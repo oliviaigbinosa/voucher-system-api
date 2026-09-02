@@ -9,8 +9,19 @@ export async function connectDb() {
     console.error('MONGODB_URI is not set in .env')
     process.exit(1)
   }
-  await mongoose.connect(uri)
-  console.log('Connected to MongoDB Atlas')
+  
+  // Log the URI with credentials masked for debugging
+  const maskedUri = uri.replace(/:([^:@]+)@/, ':***@')
+  console.log('Attempting to connect to MongoDB:', maskedUri)
+  
+  try {
+    await mongoose.connect(uri)
+    console.log('Connected to MongoDB Atlas')
+  } catch (error) {
+    console.error('MongoDB connection error:', error.message)
+    console.error('Full error details:', error)
+    throw error
+  }
 }
 
 export async function seedAdmin() {

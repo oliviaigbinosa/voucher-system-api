@@ -1,19 +1,15 @@
+import dotenv from 'dotenv'
+dotenv.config()
+
 import bcrypt from 'bcryptjs'
 import mongoose from 'mongoose'
 import Admin from './models/Admin.js'
 import SuperAdmin from './models/SuperAdmin.js'
 import User from './models/User.js'
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/petty-cash-voucher'
+const MONGODB_URI = process.env.MONGODB_URI
 
 const testUsers = [
-  {
-    email: 'finance.manager@getpayedmail.com',
-    password: 'Password!123',
-    role: 'super admin',
-    department: 'Finance',
-    model: 'SuperAdmin'
-  },
   {
     email: 'department.manager@getpayedmail.com',
     password: 'Password!123',

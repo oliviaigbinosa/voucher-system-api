@@ -169,17 +169,20 @@ export const getMe = async (req, res) => {
   }
 }
 
-const RESET_SECRET = process.env.RESET_TOKEN_SECRET
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://pettycashvoucher.netlify.app'
 
-if (!RESET_SECRET) {
-  throw new Error('RESET_TOKEN_SECRET must be set in environment variables')
+function getResetSecret() {
+  const RESET_SECRET = process.env.RESET_TOKEN_SECRET
+  if (!RESET_SECRET) {
+    throw new Error('RESET_TOKEN_SECRET must be set in environment variables')
+  }
+  return RESET_SECRET
 }
 
 function createResetToken(email) {
   const expires = Date.now() + 30 * 60 * 1000
   const payload = `${email}:${expires}`
-  const signature = crypto.createHmac('sha256', RESET_SECRET).update(payload).digest('hex')
+  const signature = crypto.createHmac('sha256', getResetSecret()).update(payload).digest('hex')
   return `${payload}:${signature}`
 }
 
@@ -188,7 +191,7 @@ function verifyResetToken(token) {
   if (parts.length !== 3) return null
   const [email, expires, signature] = parts
   const payload = `${email}:${expires}`
-  const expected = crypto.createHmac('sha256', RESET_SECRET).update(payload).digest('hex')
+  const expected = crypto.createHmac('sha256', getResetSecret()).update(payload).digest('hex')
   if (signature !== expected) return null
   if (Date.now() > parseInt(expires, 10)) return null
   return { email: email.toLowerCase(), expires: parseInt(expires, 10) }
@@ -215,7 +218,7 @@ export const forgotPassword = async (req, res) => {
     const resetUrl = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalizedEmail)}`
     const fromEmail = process.env.RESEND_FROM
     if (!fromEmail) {
-      return res.status(500).json({ error: 'FROM email is not configured' })
+      return res.status(500).json({ error: 'Testing mode. Uses Resend' })
     }
 
     await sendMail({
