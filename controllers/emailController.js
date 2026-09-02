@@ -200,7 +200,7 @@ async function getStatusNotificationRecipients(voucher, status) {
 async function sendVoucherStatusEmailInternal(voucher, statusLabel) {
   const fromEmail = process.env.RESEND_FROM
   if (!fromEmail) {
-    throw new Error('FROM email is not configured')
+    throw new Error('Testing mode. Emails are not sent')
   }
 
   const { attachments, docs } = buildVoucherAttachments(voucher.supportingDocs)
@@ -378,7 +378,7 @@ export const sendInviteEmail = async (req, res) => {
     // Set from email to use @getpayedmail.com domain
     const fromEmail = process.env.RESEND_FROM
     if (!fromEmail) {
-      return res.status(500).json({ error: 'FROM email is not configured' })
+      return res.status(500).json({ error: 'Testing mode. Emails are not sent.' })
     }
 
     if (!process.env.RESEND_API_KEY && !isGetPayedMailEmail(fromEmail)) {
@@ -444,7 +444,7 @@ export const sendApprovedCcEmail = async (req, res) => {
 
     const fromEmail = process.env.RESEND_FROM
     if (!fromEmail) {
-      return res.status(500).json({ error: 'FROM email is not configured' })
+      return res.status(500).json({ error: 'Testing mode. Emails are not sent' })
     }
 
     if (!process.env.RESEND_API_KEY && !isGetPayedMailEmail(fromEmail)) {
@@ -506,7 +506,7 @@ export const sendVoucherEmail = async (req, res) => {
 
     const fromEmail = process.env.RESEND_FROM
     if (!fromEmail) {
-      return res.status(500).json({ error: 'FROM email is not configured' })
+      return res.status(500).json({ error: 'Testing mode. Emails are not sent' })
     }
 
     if (!process.env.RESEND_API_KEY && !isGetPayedMailEmail(fromEmail)) {
@@ -575,7 +575,7 @@ export const sendLeaveRequestEmail = async (leave) => {
 
   const fromEmail = process.env.RESEND_FROM
   if (!fromEmail) {
-    throw new Error('FROM email is not configured')
+    throw new Error('Testing mode. Emails are not sent')
   }
 
   const emailAttachments = []
@@ -643,7 +643,7 @@ export const sendLeaveStatusEmail = async (leave, status) => {
 
   const fromEmail = process.env.RESEND_FROM
   if (!fromEmail) {
-    throw new Error('FROM email is not configured')
+    throw new Error('Testing mode. Emails are not sent')
   }
 
   const emailAttachments = []

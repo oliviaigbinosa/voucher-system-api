@@ -218,7 +218,7 @@ export const forgotPassword = async (req, res) => {
     const resetUrl = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalizedEmail)}`
     const fromEmail = process.env.RESEND_FROM
     if (!fromEmail) {
-      return res.status(500).json({ error: 'Testing mode. Uses Resend' })
+      return res.status(500).json({ error: 'Testing mode. Emails are sent if found in the company database' })
     }
 
     await sendMail({
