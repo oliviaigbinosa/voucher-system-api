@@ -3,6 +3,7 @@ import User from '../models/User.js'
 import Admin from '../models/Admin.js'
 import SuperAdmin from '../models/SuperAdmin.js'
 import { findAccountByEmail, isSuperAdminEmail, FINANCE_MANAGER_EMAIL } from '../utils/superAdmin.js'
+import { sendInviteEmailInternal } from '../controllers/emailController.js'
 
 function isGetPayedMailEmail(email) {
   return /^[^\s@]+@getpayedmail\.com$/.test(email)
@@ -109,7 +110,7 @@ export const createUser = async (req, res) => {
     }
 
     const hashed = await bcrypt.hash(password, 10)
-    
+
     // Create user in appropriate collection
     let user
     if (finalRole === 'super admin') {
@@ -137,6 +138,13 @@ export const createUser = async (req, res) => {
         department: normalizedDepartment,
         createdBy: creator || createdBy || undefined,
       })
+    }
+
+    // Send invite email to the new user
+    try {
+      await sendInviteEmailInternal(normalizedEmail, password, creator)
+    } catch (emailError) {
+      console.error('Failed to send invite email', emailError)
     }
 
     return res.status(201).json({

@@ -216,9 +216,9 @@ export const forgotPassword = async (req, res) => {
 
     const token = createResetToken(normalizedEmail)
     const resetUrl = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalizedEmail)}`
-    const fromEmail = process.env.RESEND_FROM
+    const fromEmail = process.env.SMTP_FROM
     if (!fromEmail) {
-      return res.status(500).json({ error: 'Testing mode. Emails are sent if found in the company database' })
+      return res.status(500).json({ error: 'SMTP_FROM is not configured' })
     }
 
     await sendMail({

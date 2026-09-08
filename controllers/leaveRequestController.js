@@ -144,10 +144,11 @@ export const updateLeaveRequestStatus = async (req, res) => {
       email: String(leave.submittedBy || '').toLowerCase(),
     }).lean()
 
+    const approverEmail = String(req.headers['x-user-email'] || '').trim().toLowerCase()
     const normalized = String(status).toLowerCase()
     if (normalized === 'approved' || normalized === 'declined') {
       try {
-        await sendLeaveStatusEmail(leave.toObject(), status)
+        await sendLeaveStatusEmail(leave.toObject(), status, approverEmail)
       } catch (emailError) {
         console.error('Failed to send leave status email', emailError)
       }
