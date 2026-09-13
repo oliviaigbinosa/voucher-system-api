@@ -9,10 +9,13 @@ const emailSchema = new mongoose.Schema({
   html: { type: String },
   type: { 
     type: String, 
-    enum: ['voucher', 'invite', 'leave-request', 'leave-status', 'voucher-status'],
+    enum: ['voucher', 'invite', 'leave-request', 'leave-status', 'voucher-status', 'password-reset'],
     required: true 
   },
   relatedId: { type: String }, // ID of related voucher, leave request, etc.
+  metadata: {
+    voucherStatus: { type: String }, // For voucher emails, store the voucher status
+  },
   isRead: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 })

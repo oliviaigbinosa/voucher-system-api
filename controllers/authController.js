@@ -3,8 +3,8 @@ import bcrypt from 'bcryptjs'
 import Admin from '../models/Admin.js'
 import User from '../models/User.js'
 import SuperAdmin from '../models/SuperAdmin.js'
-import { FINANCE_MANAGER_EMAIL } from '../utils/superAdmin.js'
-import { sendMail } from './emailController.js'
+import { sendMail} from './emailController.js'
+import Email from '../models/Email.js'
 import { generateToken } from '../middleware/auth.js'
 
 export const login = async (req, res) => {
@@ -21,16 +21,16 @@ export const login = async (req, res) => {
       User.findOne({ email: normalizedEmail })
     ])
 
-    const isFinanceManager = normalizedEmail === FINANCE_MANAGER_EMAIL
-
     // Check SuperAdmin first (highest priority)
     if (superAdmin) {
       const valid = await bcrypt.compare(password, superAdmin.password)
       if (!valid) {
-        return res.status(401).json({ error: 'Invalid email or password' })
+        return res.status(401).json({ error: 'Invalid login credentials' })
       }
-      const role = isFinanceManager ? 'super admin' : (superAdmin.role || 'super admin')
+      const role = superAdmin.role || 'super admin'
       const token = generateToken({ email: superAdmin.email, role, department: superAdmin.department || '' })
+      // Mark this as successful so rate limiter doesn't count it
+      req.skipRateLimit = true
       return res.json({ email: superAdmin.email, role, department: superAdmin.department || '', token })
     }
 
@@ -38,10 +38,12 @@ export const login = async (req, res) => {
     if (admin && admin.role !== 'super admin') {
       const valid = await bcrypt.compare(password, admin.password)
       if (!valid) {
-        return res.status(401).json({ error: 'Invalid email or password' })
+        return res.status(401).json({ error: 'Invalid login credentials' })
       }
-      const role = isFinanceManager ? 'super admin' : (admin.role || 'admin')
+      const role = admin.role || 'admin'
       const token = generateToken({ email: admin.email, role, department: admin.department || '' })
+      // Mark this as successful so rate limiter doesn't count it
+      req.skipRateLimit = true
       return res.json({ email: admin.email, role, department: admin.department || '', token })
     }
 
@@ -49,11 +51,12 @@ export const login = async (req, res) => {
     if (user) {
       const valid = await bcrypt.compare(password, user.password)
       if (!valid) {
-        return res.status(401).json({ error: 'Invalid email or password' })
+        return res.status(401).json({ error: 'Invalid login credentials' })
       }
-      // Finance manager always gets admin-level access
-      const role = isFinanceManager ? 'super admin' : (user.role || 'user')
+      const role = user.role || 'user'
       const token = generateToken({ email: user.email, role, department: user.department || '' })
+      // Mark this as successful so rate limiter doesn't count it
+      req.skipRateLimit = true
       return res.json({
         email: user.email,
         role,
@@ -63,7 +66,7 @@ export const login = async (req, res) => {
       })
     }
 
-    return res.status(401).json({ error: 'Invalid email or password' })
+    return res.status(401).json({ error: 'Invalid login credentials' })
   } catch (error) {
     console.error('Login failed', error)
     return res.status(500).json({ error: 'Login failed' })
@@ -142,23 +145,21 @@ export const getMe = async (req, res) => {
       User.findOne({ email })
     ])
 
-    const isFinanceManager = email === FINANCE_MANAGER_EMAIL
-
     // Check SuperAdmin first
     if (superAdmin) {
-      const role = isFinanceManager ? 'super admin' : (superAdmin.role || 'super admin')
+      const role = superAdmin.role || 'super admin'
       return res.json({ email: superAdmin.email, role, department: superAdmin.department || '' })
     }
 
     // Check Admin (regular admins only, not super admins)
     if (admin && admin.role !== 'super admin') {
-      const role = isFinanceManager ? 'super admin' : (admin.role || 'admin')
+      const role = admin.role || 'admin'
       return res.json({ email: admin.email, role, department: admin.department || '' })
     }
 
     // Check User
     if (user) {
-      const role = isFinanceManager ? 'super admin' : (user.role || 'user')
+      const role = user.role || 'user'
       return res.json({ email: user.email, role, department: user.department || '', createdBy: user.createdBy || '' })
     }
 
@@ -174,7 +175,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'https://pettycashvoucher.netli
 function getResetSecret() {
   const RESET_SECRET = process.env.RESET_TOKEN_SECRET
   if (!RESET_SECRET) {
-    throw new Error('RESET_TOKEN_SECRET must be set in environment variables')
+    throw new Error('RESET_TOKEN_SECRET not set')
   }
   return RESET_SECRET
 }
@@ -211,7 +212,7 @@ export const forgotPassword = async (req, res) => {
       User.findOne({ email: normalizedEmail })
     ])
     if (!admin && !superAdmin && !user) {
-      return res.status(404).json({ error: 'No account found with that email address' })
+      return res.status(404).json({ error: 'Invalid email address' })
     }
 
     const token = createResetToken(normalizedEmail)
@@ -221,18 +222,28 @@ export const forgotPassword = async (req, res) => {
       return res.status(500).json({ error: 'SMTP_FROM is not configured' })
     }
 
+    // Store reset email in inbox for demo users and try to send via SMTP
+    try {
+      await Email.create({
+        recipientEmail: normalizedEmail,
+        senderEmail: 'getpayed.support@getpayedmail.com',
+        senderName: 'Getpayed Support',
+        subject: 'Reset your Petty Cash Voucher password',
+        text: `Hello,\n\nYou requested a password reset for your Petty Cash Voucher account.\n\nClick the link below to set a new password:\n${resetUrl}\n\nThis link will expire in 30 minutes. If you did not request this reset, please ignore this email.`,
+        html: null,
+        type: 'password-reset',
+        relatedId: null,
+        metadata: null,
+      })
+    } catch (e) {
+      console.error('Failed to store reset email in inbox:', e)
+    }
+
     await sendMail({
       from: fromEmail,
       to: normalizedEmail,
       subject: 'Reset your Petty Cash Voucher password',
-      text: `Hello,
-
-You requested a password reset for your Petty Cash Voucher account.
-
-Click the link below to set a new password:
-${resetUrl}
-
-This link will expire in 30 minutes. If you did not request this reset, please ignore this email.`,
+      text: `Hello,\n\nYou requested a password reset for your Petty Cash Voucher account.\n\nClick the link below to set a new password:\n${resetUrl}\n\nThis link will expire in 30 minutes. If you did not request this reset, please ignore this email.`,
     })
 
     return res.json({ ok: true })
@@ -280,6 +291,24 @@ export const resetPassword = async (req, res) => {
     if (user) {
       user.password = hashed
       await user.save()
+    }
+
+    // Store a confirmation email in the inbox so users can preview the reset
+    try {
+      const fromEmail = 'getpayed.support@getpayedmail.com'
+      await Email.create({
+        recipientEmail: normalizedEmail,
+        senderEmail: fromEmail,
+        senderName: 'Getpayed Support',
+        subject: 'Your password has been reset',
+        text: `Your password for the Petty Cash Voucher system has been successfully reset. If you did not perform this action, contact support.`,
+        html: null,
+        type: 'password-reset',
+        relatedId: null,
+        metadata: null,
+      })
+    } catch (e) {
+      console.error('Failed to store reset confirmation in inbox:', e)
     }
 
     return res.json({ ok: true })

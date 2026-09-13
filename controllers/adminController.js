@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
 import Admin from '../models/Admin.js'
 import SuperAdmin from '../models/SuperAdmin.js'
-import { findAccountByEmail, isSuperAdminEmail, FINANCE_MANAGER_EMAIL } from '../utils/superAdmin.js'
+import { findAccountByEmail, isSuperAdminEmail } from '../utils/superAdmin.js'
 import { sendInviteEmailInternal } from '../controllers/emailController.js'
 
 function isGetPayedMailEmail(email) {
@@ -21,22 +21,35 @@ export const listUsers = async (req, res) => {
   try {
     const email = req.user.email
     const isSuper = await isSuperAdminEmail(email)
-    const isFinanceManager = email === FINANCE_MANAGER_EMAIL
 
     let users = []
     let admins = []
     let superAdmins = []
 
-    if (isFinanceManager || isSuper) {
+    if (isSuper) {
       users = await User.find({}, '-password')
       admins = await Admin.find({ role: { $ne: 'super admin' } }, '-password')
       superAdmins = await SuperAdmin.find({}, '-password')
     } else {
-      users = await User.find({ createdBy: email }, '-password')
+      // For regular admins, get their department first
+      const admin = await Admin.findOne({ email })
+      if (admin) {
+        const adminDepartment = admin.department
+        // Show all users in the same department
+        users = await User.find({ department: adminDepartment }, '-password')
+        // Also show admins in the same department (excluding themselves)
+        admins = await Admin.find({ 
+          department: adminDepartment, 
+          email: { $ne: email },
+          role: { $ne: 'super admin' } 
+        }, '-password')
+      } else {
+        // Fallback to createdBy if department not found
+        users = await User.find({ createdBy: email }, '-password')
+      }
     }
 
     const all = [...users, ...admins, ...superAdmins]
-      .filter((user) => String(user.email || '').toLowerCase() !== FINANCE_MANAGER_EMAIL)
       .sort(
         (a, b) => getCreatedAt(a).getTime() - getCreatedAt(b).getTime(),
       )
@@ -86,14 +99,13 @@ export const createUser = async (req, res) => {
     const isAdmin = finalRole === 'admin' || finalRole === 'super admin'
     
     const isSuper = await isSuperAdminEmail(creator)
-    const isFinanceManager = creator === FINANCE_MANAGER_EMAIL
     
-    // Only super admins / finance manager need to provide role (unless auto-assigned for Finance)
-    if ((isSuper || isFinanceManager) && !role && normalizedDepartment.toLowerCase() !== 'finance') {
+    // Only super admins need to provide role (unless auto-assigned for Finance)
+    if (isSuper && !role && normalizedDepartment.toLowerCase() !== 'finance') {
       return res.status(400).json({ error: 'Role is required' })
     }
     
-    if (isAdmin && !isSuper && !isFinanceManager) {
+    if (isAdmin && !isSuper) {
       return res.status(403).json({ error: 'Only super admins can create admin accounts' })
     }
     
@@ -268,9 +280,8 @@ export const validateManagerEmail = async (req, res) => {
           : 'user')
 
     const isTargetAdmin = targetRole === 'admin'
-    const isFinanceManager = targetEmail === FINANCE_MANAGER_EMAIL
 
-    if (!isTargetAdmin && !isFinanceManager) {
+    if (!isTargetAdmin) {
       return res.json({
         valid: false,
         error: 'This user is not a department manager',
@@ -301,7 +312,6 @@ export const deleteUser = async (req, res) => {
       return res.status(403).json({ error: 'Forbidden' })
     }
     const isSuper = await isSuperAdminEmail(requesterEmail)
-    const isFinanceManager = requesterEmail === FINANCE_MANAGER_EMAIL
 
     let user = await User.findById(req.params.id)
     if (!user) {
@@ -315,7 +325,7 @@ export const deleteUser = async (req, res) => {
     }
 
     const targetRole = user.role || 'user'
-    if (!isSuper && !isFinanceManager) {
+    if (!isSuper) {
       if (targetRole === 'admin' || targetRole === 'super admin') {
         return res.status(403).json({ error: 'Only super admins can delete admin accounts' })
       }

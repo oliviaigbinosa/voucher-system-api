@@ -10,9 +10,18 @@ const router = express.Router()
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Limit each IP to 5 login requests per windowMs
-  message: { error: 'Too many login attempts, please try again later' },
+  message: { error: 'Too many login attempts. Please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for successful logins (will be set in controller)
+    return req.skipRateLimit === true
+  },
+  keyGenerator: (req) => {
+    // Use IP + email combination for more precise rate limiting
+    const email = req.body?.email || 'unknown'
+    return `${email}`
+  }
 })
 
 // Rate limiting for forgot password endpoint (2 attempts per hour)

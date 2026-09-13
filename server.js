@@ -4,7 +4,7 @@ dotenv.config()
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
-import { connectDb, seedAdmin } from './config/database.js'
+import { connectDb} from './config/database.js'
 import authRoutes from './routes/authRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
 import emailRoutes from './routes/emailRoutes.js'
@@ -46,7 +46,6 @@ app.get('/', (_req, res) => {
 const port = process.env.PORT || 3001
 
 connectDb()
-  .then(seedAdmin)
   .then(() => {
     app.listen(port, () => {
       console.log(`Server listening on port ${port}`)

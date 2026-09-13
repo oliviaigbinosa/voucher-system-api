@@ -4,10 +4,11 @@ import SuperAdmin from '../models/SuperAdmin.js'
 import Email from '../models/Email.js'
 import {
   FINANCE_EMAIL,
-  FINANCE_MANAGER_EMAIL,
-  getAllSuperAdminEmails,
   isFinanceRoutedVoucher,
 } from '../utils/superAdmin.js'
+
+const FINANCE_MANAGER_EMAIL = 'finance.manager@getpayedmail.com'
+const DEPT_MEMBER_EMAIL = 'department.member@getpayedmail.com'
 import nodemailer from 'nodemailer'
 
 function isGetPayedMailEmail(email) {
@@ -83,6 +84,10 @@ function buildStatusLines({ approvedBy, declinedBy, processedBy, status }) {
   return lines.length ? `\n\n${lines.join('\n')}` : ''
 }
 
+function normalizeVoucherNo(voucher = {}) {
+  return String(voucher.id ?? voucher.voucherNo ?? voucher.relatedId ?? voucher._id ?? '').trim() || 'N/A'
+}
+
 function buildVoucherEmailText({
   heading,
   footer,
@@ -115,30 +120,26 @@ function buildVoucherEmailText({
   return `${heading}\n${'═'.repeat(52)}\nVoucher No.:      ${voucherNo}\nCompany:          Getpayed Technology Solutions Ltd.\nSubmitted By:     ${submittedBy || from}\n\nEMAIL DETAILS\n${'─'.repeat(52)}\nFrom:             ${formatDisplay(from)}\nTo:               ${formatDisplay(to)}${ccLine}\nSubject:          ${subject}\n\nPAYEE INFORMATION\n${'─'.repeat(52)}\nPayee:            ${payee || ''}\nDepartment:       ${department || ''}\n\nAMOUNT & PURPOSE\n${'─'.repeat(52)}\nAmount (Figures): ₦${formattedAmount}${amountWords != null ? `\nAmount (Words):   ${amountWords || ''}` : ''}\n\nPurpose / Description:\n${purpose || ''}\n\nSUPPORTING DOCUMENTS\n${'─'.repeat(52)}\nSubmission Date:  ${submissionDate}\nAttached Files:\n${docs}\n\n${'═'.repeat(52)}\n${footer}${buildStatusLines({ approvedBy, declinedBy, processedBy, status })}`
 }
 
+function normalizeFinanceRecipient(email) {
+  const normalized = String(email || '').trim().toLowerCase()
+  return normalized === FINANCE_EMAIL ? FINANCE_MANAGER_EMAIL : normalized
+}
+
 async function getFinanceAwareRecipients(to, cc, from) {
   const recipients = new Set()
   const normalizedTo = String(to || '').trim().toLowerCase()
   const normalizedCc = String(cc || '').trim().toLowerCase()
   const normalizedFrom = String(from || '').trim().toLowerCase()
 
-  if (normalizedTo) recipients.add(normalizedTo)
-  if (normalizedCc) recipients.add(normalizedCc)
-
-  // Special handling for finance manager submitting vouchers
-  // When finance manager sends to finance@getpayedmail.com, send to all super admins
-  if (normalizedTo === FINANCE_EMAIL && normalizedFrom === FINANCE_MANAGER_EMAIL) {
-    const superAdminEmails = await getAllSuperAdminEmails()
-    superAdminEmails.forEach((email) => recipients.add(email))
-    return [...recipients]
-  }
+  if (normalizedTo) recipients.add(normalizeFinanceRecipient(normalizedTo))
+  if (normalizedCc) recipients.add(normalizeFinanceRecipient(normalizedCc))
+  if (normalizedFrom) recipients.add(normalizeFinanceRecipient(normalizedFrom))
 
   const financeRouted =
     normalizedTo === FINANCE_EMAIL || normalizedCc === FINANCE_EMAIL
 
   if (financeRouted) {
     recipients.add(FINANCE_MANAGER_EMAIL)
-    const superAdminEmails = await getAllSuperAdminEmails()
-    superAdminEmails.forEach((email) => recipients.add(email))
   }
 
   return [...recipients]
@@ -149,14 +150,18 @@ async function getApprovedEmailRecipients(voucher) {
   const from = String(voucher?.from || '').trim().toLowerCase()
   const cc = String(voucher?.cc || '').trim().toLowerCase()
 
-  if (from) recipients.add(from)
-  if (cc) recipients.add(cc)
+  if (from) recipients.add(normalizeFinanceRecipient(from))
+  if (cc) recipients.add(normalizeFinanceRecipient(cc))
 
-  if (isFinanceRoutedVoucher(voucher)) {
-    recipients.add(FINANCE_EMAIL)
+  // Finance manager should receive approved vouchers that originate from department members
+  const submittedBy = String(voucher?.submittedBy || '').trim().toLowerCase()
+  if (submittedBy === DEPT_MEMBER_EMAIL) {
     recipients.add(FINANCE_MANAGER_EMAIL)
-    const superAdminEmails = await getAllSuperAdminEmails()
-    superAdminEmails.forEach((email) => recipients.add(email))
+  }
+
+  // If the voucher was explicitly routed to finance, notify the finance manager only
+  if (isFinanceRoutedVoucher(voucher)) {
+    recipients.add(FINANCE_MANAGER_EMAIL)
   }
 
   return [...recipients]
@@ -173,21 +178,40 @@ async function getSubmitterNotificationRecipients(voucher) {
   return [...recipients]
 }
 
+function filterOutSubmitterRecipients(recipients, voucher) {
+  const submitterEmails = new Set(
+    [
+      String(voucher?.submittedBy || '').trim().toLowerCase(),
+      String(voucher?.from || '').trim().toLowerCase(),
+    ].filter(Boolean),
+  )
+
+  return recipients.filter((email) => !submitterEmails.has(String(email || '').trim().toLowerCase()))
+}
+
 async function getStatusNotificationRecipients(voucher, status) {
   const recipients = new Set()
+  const normalizedStatus = String(status || '').trim().toLowerCase()
+  const submittedBy = String(voucher?.submittedBy || '').trim().toLowerCase()
 
   const submitterRecipients = await getSubmitterNotificationRecipients(voucher)
   submitterRecipients.forEach((email) => recipients.add(email))
 
-  if (status === 'Approved') {
+  if (normalizedStatus === 'approved') {
     const approvedRecipients = await getApprovedEmailRecipients(voucher)
     approvedRecipients.forEach((email) => recipients.add(email))
   }
 
-  if (isFinanceRoutedVoucher(voucher)) {
+  // For processed/rejected statuses: finance manager should receive processed/rejected voucher mails
+  // that were sent by them (finance manager as submitter)
+  if ((normalizedStatus === 'processed' || normalizedStatus === 'rejected') && submittedBy === FINANCE_MANAGER_EMAIL) {
     recipients.add(FINANCE_MANAGER_EMAIL)
-    const superAdminEmails = await getAllSuperAdminEmails()
-    superAdminEmails.forEach((email) => recipients.add(email))
+  }
+
+  // If voucher was explicitly routed to finance in to/cc, notify the finance manager only,
+  // except for department-member decline notices.
+  if (isFinanceRoutedVoucher(voucher) && !(normalizedStatus === 'declined' && submittedBy === DEPT_MEMBER_EMAIL)) {
+    recipients.add(FINANCE_MANAGER_EMAIL)
   }
 
   return [...recipients]
@@ -198,6 +222,7 @@ async function sendVoucherStatusEmailInternal(voucher, statusLabel) {
     throw new Error('From email must be a @getpayedmail.com address')
   }
   const fromEmail = voucher.from
+  const voucherId = normalizeVoucherNo(voucher)
 
   const { attachments, docs } = buildVoucherAttachments(voucher.supportingDocs)
 
@@ -227,7 +252,7 @@ async function sendVoucherStatusEmailInternal(voucher, statusLabel) {
   const text = buildVoucherEmailText({
     heading,
     footer,
-    voucherNo: voucher.id,
+    voucherNo: voucherId,
     submittedBy: voucher.submittedBy,
     from: voucher.from,
     to: voucher.to,
@@ -259,11 +284,15 @@ async function sendVoucherStatusEmailInternal(voucher, statusLabel) {
       recipientEmail: recipient,
       senderEmail: fromEmail,
       senderName: displayName,
-      subject: `${subjectPrefix} ${voucher.subject || `Petty Cash Voucher ${voucher.id}`}`,
+      subject: `${subjectPrefix} ${voucher.subject || `Petty Cash Voucher ${voucherId}`}`,
       text,
       html: null,
       type: 'voucher-status',
-      relatedId: voucher.id,
+      relatedId: voucherId,
+      metadata: {
+        voucherNo: voucherId,
+        voucherStatus: statusLabel
+      }
     })
   }
 
@@ -271,7 +300,7 @@ async function sendVoucherStatusEmailInternal(voucher, statusLabel) {
     from: formatAddress(fromEmail, displayName),
     replyTo: formatAddress(voucher.from, displayName),
     to: recipientEmails.map((email) => formatAddress(email)),
-    subject: `${subjectPrefix} ${voucher.subject || `Petty Cash Voucher ${voucher.id}`}`,
+    subject: `${subjectPrefix} ${voucher.subject || `Petty Cash Voucher ${voucherId}`}`,
     text,
     attachments,
   })
@@ -305,7 +334,7 @@ const transporter = nodemailer.createTransport({
   },
 })
 
-async function storeEmailInInbox({ recipientEmail, senderEmail, senderName, subject, text, html, type, relatedId }) {
+async function storeEmailInInbox({ recipientEmail, senderEmail, senderName, subject, text, html, type, relatedId, metadata }) {
   try {
     await Email.create({
       recipientEmail: recipientEmail.toLowerCase(),
@@ -316,6 +345,7 @@ async function storeEmailInInbox({ recipientEmail, senderEmail, senderName, subj
       html,
       type,
       relatedId,
+      metadata,
     })
   } catch (error) {
     console.error('Failed to store email in inbox:', error)
@@ -387,6 +417,7 @@ If you have any questions, please contact your administrator.`
     html: null,
     type: 'invite',
     relatedId: null,
+    metadata: null,
   })
 
   const info = await sendMail({
@@ -414,7 +445,7 @@ export const sendInviteEmail = async (req, res) => {
       (await Admin.findOne({ email: toEmail })) ||
       (await SuperAdmin.findOne({ email: toEmail }))
     if (!existingUser) {
-      return res.status(400).json({ error: 'User not found in database. Invite failed' })
+      return res.status(400).json({ error: 'User not found. Invite failed' })
     }
 
     const info = await sendInviteEmailInternal(toEmail, password, senderEmail)
@@ -482,8 +513,8 @@ export const sendApprovedCcEmail = async (req, res) => {
 export async function sendVoucherEmailInternal(voucher) {
   console.log('sendVoucherEmailInternal called with:', JSON.stringify(voucher, null, 2))
 
+  const voucherNo = normalizeVoucherNo(voucher)
   const {
-    id: voucherNo,
     from,
     to,
     cc,
@@ -517,11 +548,34 @@ export async function sendVoucherEmailInternal(voucher) {
 
   console.log('Recipient emails:', recipientEmails)
 
+  // Enforce finance visibility rules for initial voucher sends:
+  // - If the submitter is a department member, do not send to finance addresses until the voucher is approved.
+  // - Do not send to finance.manager@getpayedmail.com for initial pending vouchers; finance.manager only receives processed/rejected status emails when they are the submitter (handled in status emails).
+  const submittedByNormalized = String(submittedBy || '').toLowerCase()
+  recipientEmails = [...new Set(
+    recipientEmails
+      .filter(Boolean)
+      .map((email) => normalizeFinanceRecipient(email)),
+  )]
+
+  recipientEmails = filterOutSubmitterRecipients(recipientEmails, {
+    submittedBy,
+    from: fromEmail,
+  })
+
+  recipientEmails = recipientEmails.filter((r) => {
+    const e = String(r || '').toLowerCase()
+    if (e === FINANCE_MANAGER_EMAIL) {
+      if (submittedByNormalized === DEPT_MEMBER_EMAIL && String(status || '').toLowerCase() !== 'approved') return false
+    }
+    return true
+  })
+
   const { attachments, docs } = buildVoucherAttachments(supportingDocs)
   const text = buildVoucherEmailText({
     heading: 'PETTY CASH VOUCHER',
     footer: 'This voucher was generated by the Petty Cash Voucher System.',
-    voucherNo: voucherNo || 'N/A',
+    voucherNo: voucherNo,
     submittedBy,
     from: fromEmail,
     to: to || 'N/A',
@@ -555,6 +609,10 @@ export async function sendVoucherEmailInternal(voucher) {
         html: null,
         type: 'voucher',
         relatedId: voucherNo,
+        metadata: {
+          voucherNo,
+          voucherStatus: status || 'Pending'
+        }
       })
     }
     console.log('Stored emails in inbox for recipients:', recipientEmails)
@@ -669,6 +727,7 @@ export const sendLeaveRequestEmail = async (leave) => {
     html,
     type: 'leave-request',
     relatedId: leave._id,
+    metadata: null,
   })
 
   const info = await sendMail({
@@ -744,29 +803,14 @@ export const sendLeaveStatusEmail = async (leave, status, approverEmail = '') =>
 
   const subject = `Leave Request ${statusCapitalized}`
 
-  await storeEmailInInbox({
-    recipientEmail: email,
-    senderEmail: fromEmail,
-    senderName: displayName,
-    subject,
-    text,
-    html,
-    type: 'leave-status',
-    relatedId: leave._id,
-  })
+  // Approved/declined leave request emails should only be sent to the submitter.
+  const recipients = new Set()
+  recipients.add(email)
 
-  const info = await sendMail({
-    from: formatAddress(fromEmail, displayName),
-    to: formatAddress(email),
-    subject,
-    text,
-    html,
-    attachments: emailAttachments,
-  })
-
-  if (actualStatus === 'approved') {
+  // Send to all recipients
+  for (const recipient of recipients) {
     await storeEmailInInbox({
-      recipientEmail: 'chinenye.onyia@getpayedmail.com',
+      recipientEmail: recipient,
       senderEmail: fromEmail,
       senderName: displayName,
       subject,
@@ -774,11 +818,12 @@ export const sendLeaveStatusEmail = async (leave, status, approverEmail = '') =>
       html,
       type: 'leave-status',
       relatedId: leave._id,
+      metadata: null,
     })
 
     await sendMail({
       from: formatAddress(fromEmail, displayName),
-      to: formatAddress('chinenye.onyia@getpayedmail.com'),
+      to: formatAddress(recipient),
       subject,
       text,
       html,

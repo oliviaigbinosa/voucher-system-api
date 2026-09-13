@@ -3,7 +3,7 @@ import User from '../models/User.js'
 import SuperAdmin from '../models/SuperAdmin.js'
 
 export const FINANCE_EMAIL = 'finance@getpayedmail.com'
-export const FINANCE_MANAGER_EMAIL = 'gbemisola.olajide@getpayedmail.com'
+export const FINANCE_MANAGER_EMAIL = 'finance.manager@getpayedmail.com'
 
 export async function findAccountByEmail(email) {
   const normalized = String(email || '').trim().toLowerCase()
@@ -35,24 +35,8 @@ export async function isSuperAdminEmail(email) {
   )
 }
 
-export async function getAllSuperAdminEmails() {
-  const emails = new Set()
-
-  const superAdmins = await SuperAdmin.find({}, 'email').lean()
-  superAdmins.forEach((entry) => emails.add(entry.email.toLowerCase()))
-
-  const legacySupers = await Admin.find({ role: 'super admin' }, 'email').lean()
-  legacySupers.forEach((entry) => emails.add(entry.email.toLowerCase()))
-
-  const envEmail = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase()
-  if (envEmail) emails.add(envEmail)
-
-  return [...emails]
-}
-
 export function isFinanceRoutedVoucher(voucher) {
-  const finance = FINANCE_EMAIL
   const to = String(voucher?.to || '').trim().toLowerCase()
   const cc = String(voucher?.cc || '').trim().toLowerCase()
-  return to === finance || cc === finance
+  return to === FINANCE_EMAIL || cc === FINANCE_EMAIL
 }

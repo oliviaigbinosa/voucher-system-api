@@ -3,6 +3,54 @@ import { sendInviteEmail, sendVoucherEmail, sendApprovedCcEmail } from '../contr
 import Email from '../models/Email.js'
 
 const router = express.Router()
+const FINANCE_MANAGER_EMAIL = 'finance.manager@getpayedmail.com'
+const DEPT_MEMBER_EMAIL = 'department.member@getpayedmail.com'
+
+function shouldIncludeFinanceInboxEmail(emailDoc) {
+  const docType = String(emailDoc.type || '').toLowerCase()
+  const senderEmail = String(emailDoc.senderEmail || '').toLowerCase()
+  const recipientEmail = String(emailDoc.recipientEmail || '').toLowerCase()
+  const metadataStatus = emailDoc?.metadata?.voucherStatus
+  const statusValue = String(metadataStatus || '').trim().toLowerCase()
+
+  if (recipientEmail !== FINANCE_MANAGER_EMAIL) {
+    return false
+  }
+
+  if (docType === 'leave-status') {
+    return senderEmail === FINANCE_MANAGER_EMAIL && ['approved', 'declined'].includes(statusValue)
+  }
+
+  if (docType === 'leave-request') {
+    // Show leave requests where finance.manager is the recipient
+    return true
+  }
+
+  if (docType === 'voucher' || docType === 'voucher-status') {
+    const isDepartmentMemberDeclinedVoucher =
+      senderEmail === DEPT_MEMBER_EMAIL && statusValue === 'declined'
+
+    if (isDepartmentMemberDeclinedVoucher) {
+      return false
+    }
+
+    const isApprovedVoucherFromDepartmentMember =
+      senderEmail === DEPT_MEMBER_EMAIL && statusValue === 'approved'
+
+    const isFinanceManagerProcessedRejectedStatus =
+      senderEmail === FINANCE_MANAGER_EMAIL && ['processed', 'rejected'].includes(statusValue)
+
+    const isAdminOrOtherSenderVoucher =
+      senderEmail &&
+      senderEmail !== FINANCE_MANAGER_EMAIL &&
+      senderEmail !== DEPT_MEMBER_EMAIL &&
+      !['processed', 'rejected'].includes(statusValue)
+
+    return isApprovedVoucherFromDepartmentMember || isFinanceManagerProcessedRejectedStatus || isAdminOrOtherSenderVoucher
+  }
+
+  return false
+}
 
 router.post('/email/send-invite', sendInviteEmail)
 router.post('/email/send-voucher', sendVoucherEmail)
@@ -18,8 +66,16 @@ router.get('/email/inbox', async (req, res) => {
     }
 
     const normalizedEmail = email.toLowerCase()
-    const emails = await Email.find({ recipientEmail: normalizedEmail })
-      .sort({ createdAt: -1 })
+    
+    let emails
+    if (normalizedEmail === FINANCE_MANAGER_EMAIL) {
+      const allEmails = await Email.find({ recipientEmail: normalizedEmail }).sort({ createdAt: -1 })
+      emails = allEmails.filter((emailDoc) => shouldIncludeFinanceInboxEmail(emailDoc))
+    } else {
+      // For other users, show all emails
+      emails = await Email.find({ recipientEmail: normalizedEmail })
+        .sort({ createdAt: -1 })
+    }
     
     console.log('Found emails for', normalizedEmail, ':', emails.length)
     console.log('Email IDs:', emails.map(e => e._id))
@@ -59,10 +115,23 @@ router.get('/email/unread-count', async (req, res) => {
       return res.status(400).json({ error: 'Email is required' })
     }
 
-    const count = await Email.countDocuments({
-      recipientEmail: email.toLowerCase(),
-      isRead: false
-    })
+    const normalizedEmail = email.toLowerCase()
+    
+    let count
+    if (normalizedEmail === FINANCE_MANAGER_EMAIL) {
+      const allUnreadEmails = await Email.find({
+        recipientEmail: normalizedEmail,
+        isRead: false,
+      })
+
+      count = allUnreadEmails.filter((emailDoc) => shouldIncludeFinanceInboxEmail(emailDoc)).length
+    } else {
+      // For other users, count all unread emails
+      count = await Email.countDocuments({
+        recipientEmail: normalizedEmail,
+        isRead: false
+      })
+    }
 
     res.json({ count })
   } catch (error) {

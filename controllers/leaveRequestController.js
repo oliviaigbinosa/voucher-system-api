@@ -3,7 +3,6 @@ import Admin from '../models/Admin.js'
 import User from '../models/User.js'
 import SuperAdmin from '../models/SuperAdmin.js'
 import { sendLeaveRequestEmail, sendLeaveStatusEmail } from '../controllers/emailController.js'
-import { FINANCE_MANAGER_EMAIL } from '../utils/superAdmin.js'
 
 export const getLeaveRequests = async (req, res) => {
   try {
@@ -14,15 +13,14 @@ export const getLeaveRequests = async (req, res) => {
       email ? SuperAdmin.findOne({ email }).lean() : null,
     ])
     const requester = admin || user || superAdmin
-    const canViewAll = requester?.email?.toLowerCase() === 'chinenye.onyia@getpayedmail.com'
-    const isFinanceManager = requester?.email?.toLowerCase() === FINANCE_MANAGER_EMAIL
+    const canViewAll = requester?.email?.toLowerCase() === 'hr@getpayedmail.com'
     const safeEmail = email ? email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : ''
     const managerQuery = email ? { departmentManager: { $regex: new RegExp('^' + safeEmail + '$', 'i') } } : null
 
     let query = { _id: { $in: [] } }
     if (canViewAll) {
       query = {}
-    } else if (isFinanceManager) {
+    } else if (superAdmin) {
       const financeUsers = await User.find({
         department: { $regex: new RegExp('^finance$', 'i') },
       }, 'email').lean()
@@ -144,7 +142,7 @@ export const updateLeaveRequestStatus = async (req, res) => {
       email: String(leave.submittedBy || '').toLowerCase(),
     }).lean()
 
-    const approverEmail = String(req.headers['x-user-email'] || '').trim().toLowerCase()
+    const approverEmail = String(req.user?.email || '').trim().toLowerCase()
     const normalized = String(status).toLowerCase()
     if (normalized === 'approved' || normalized === 'declined') {
       try {

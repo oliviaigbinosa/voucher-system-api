@@ -4,11 +4,9 @@ import User from '../models/User.js'
 import SuperAdmin from '../models/SuperAdmin.js'
 import {
   findAccountByEmail,
-  getAllSuperAdminEmails,
   isFinanceRoutedVoucher,
   isSuperAdminEmail,
   FINANCE_EMAIL,
-  FINANCE_MANAGER_EMAIL,
 } from '../utils/superAdmin.js'
 import {
   sendApprovedCcEmailInternal,
@@ -61,7 +59,6 @@ export const getVouchers = async (req, res) => {
       orClauses.push({ submittedBy: email })
       orClauses.push({ to: email })
       orClauses.push({ cc: email })
-      orClauses.push({ financeSuperAdminRecipients: email })
       query = { $or: orClauses }
     } else {
       query = {
@@ -70,7 +67,6 @@ export const getVouchers = async (req, res) => {
           { submittedBy: email },
           { to: email },
           { cc: email },
-          { financeSuperAdminRecipients: email },
         ],
       }
     }
@@ -106,20 +102,6 @@ export const createVoucher = async (req, res) => {
     const existing = await Voucher.findOne({ id: correctVoucherId })
     if (existing) {
       return res.status(409).json({ error: 'Voucher with this ID already exists' })
-    }
-
-    if (isFinanceRoutedVoucher(payload)) {
-      const sender = String(payload.submittedBy || payload.from || '').trim().toLowerCase()
-      const allSupers = await getAllSuperAdminEmails()
-      if (sender === FINANCE_MANAGER_EMAIL.toLowerCase()) {
-        payload.financeSuperAdminRecipients = [FINANCE_MANAGER_EMAIL.toLowerCase()]
-      } else {
-        const others = allSupers.filter((e) => String(e).toLowerCase() !== FINANCE_MANAGER_EMAIL.toLowerCase())
-        if (!others.includes(FINANCE_MANAGER_EMAIL.toLowerCase())) {
-          others.push(FINANCE_MANAGER_EMAIL.toLowerCase())
-        }
-        payload.financeSuperAdminRecipients = others
-      }
     }
 
     const voucher = await Voucher.create(payload)
