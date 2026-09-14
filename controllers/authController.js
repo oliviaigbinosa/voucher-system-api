@@ -217,10 +217,7 @@ export const forgotPassword = async (req, res) => {
 
     const token = createResetToken(normalizedEmail)
     const resetUrl = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalizedEmail)}`
-    const fromEmail = process.env.SMTP_FROM
-    if (!fromEmail) {
-      return res.status(500).json({ error: 'SMTP_FROM is not configured' })
-    }
+    const fromEmail = process.env.SMTP_FROM || 'getpayed.support@getpayedmail.com'
 
     // Store reset email in inbox for demo users and try to send via SMTP
     try {

@@ -324,15 +324,19 @@ export async function sendVoucherRejectedEmailInternal(voucher) {
   return sendVoucherStatusEmailInternal(voucher, 'Rejected')
 }
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: String(process.env.SMTP_SECURE || '').toLowerCase() === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-})
+let transporter = null
+
+if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: String(process.env.SMTP_SECURE || '').toLowerCase() === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  })
+}
 
 async function storeEmailInInbox({ recipientEmail, senderEmail, senderName, subject, text, html, type, relatedId, metadata }) {
   try {
@@ -353,10 +357,6 @@ async function storeEmailInInbox({ recipientEmail, senderEmail, senderName, subj
 }
 
 export async function sendMail(mailOptions) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.log('SMTP credentials not configured - skipping actual email send (email stored in inbox for demo)')
-    return { messageId: null }
-  }
 
   const attachments = mailOptions.attachments?.length
     ? mailOptions.attachments.map((att) => ({
@@ -365,6 +365,11 @@ export async function sendMail(mailOptions) {
         contentType: att.contentType,
       }))
     : undefined
+
+  if (!transporter) {
+    console.log('SMTP transporter not configured - skipping actual email send (email stored in inbox for demo)')
+    return { messageId: null }
+  }
 
   try {
     const info = await transporter.sendMail({
