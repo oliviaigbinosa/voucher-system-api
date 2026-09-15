@@ -170,7 +170,7 @@ export const getMe = async (req, res) => {
   }
 }
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://pettycashvoucher.netlify.app'
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://voucher-system-client.netlify.app'
 
 function getResetSecret() {
   const RESET_SECRET = process.env.RESET_TOKEN_SECRET
