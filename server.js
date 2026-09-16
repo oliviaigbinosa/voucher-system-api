@@ -27,7 +27,7 @@ app.use(helmet())
 
 // CORS configuration
 app.use(cors({
-  origin: 'http://localhost:3000' || 'https://voucher-system-client.netlify.app',
+  origin: process.env.FRONTEND_URL || 'https://voucher-system-client.netlify.app',
   credentials: true
 }))
 
