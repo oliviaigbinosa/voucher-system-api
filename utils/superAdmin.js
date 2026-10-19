@@ -2,8 +2,8 @@ import Admin from '../models/Admin.js'
 import User from '../models/User.js'
 import SuperAdmin from '../models/SuperAdmin.js'
 
-export const FINANCE_EMAIL = 'finance@getpayedmail.com'
-export const FINANCE_MANAGER_EMAIL = 'finance.manager@getpayedmail.com'
+export const FINANCE_EMAIL = 'finance@example.com'
+export const FINANCE_MANAGER_EMAIL = 'finance.manager@example.com'
 
 export async function findAccountByEmail(email) {
   const normalized = String(email || '').trim().toLowerCase()

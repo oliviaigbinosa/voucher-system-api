@@ -3,8 +3,8 @@ import { sendInviteEmail, sendVoucherEmail, sendApprovedCcEmail } from '../contr
 import Email from '../models/Email.js'
 
 const router = express.Router()
-const FINANCE_MANAGER_EMAIL = 'finance.manager@getpayedmail.com'
-const DEPT_MEMBER_EMAIL = 'department.member@getpayedmail.com'
+const FINANCE_MANAGER_EMAIL = 'finance.manager@example.com'
+const DEPT_MEMBER_EMAIL = 'department.member@example.com'
 
 function shouldIncludeFinanceInboxEmail(emailDoc) {
   const docType = String(emailDoc.type || '').toLowerCase()

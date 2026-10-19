@@ -7,8 +7,8 @@ import {
   isFinanceRoutedVoucher,
 } from '../utils/superAdmin.js'
 
-const FINANCE_MANAGER_EMAIL = 'finance.manager@getpayedmail.com'
-const DEPT_MEMBER_EMAIL = 'department.member@getpayedmail.com'
+const FINANCE_MANAGER_EMAIL = 'finance.manager@example.com'
+const DEPT_MEMBER_EMAIL = 'department.member@example.com'
 import nodemailer from 'nodemailer'
 
 function isGetPayedMailEmail(email) {
@@ -219,7 +219,7 @@ async function getStatusNotificationRecipients(voucher, status) {
 
 async function sendVoucherStatusEmailInternal(voucher, statusLabel) {
   if (!isGetPayedMailEmail(voucher.from)) {
-    throw new Error('From email must be a @getpayedmail.com address')
+    throw new Error('From email must be a @example.com address')
   }
   const fromEmail = voucher.from
   const voucherId = normalizeVoucherNo(voucher)
@@ -484,11 +484,11 @@ export const sendApprovedCcEmail = async (req, res) => {
     }
 
     if (!isAllowedRecipient(cc)) {
-      return res.status(400).json({ error: 'CC email must be a @getpayedmail.com address' })
+      return res.status(400).json({ error: 'CC email must be a @example.com address' })
     }
 
     if (!isGetPayedMailEmail(from)) {
-      return res.status(400).json({ error: 'From email must be a @getpayedmail.com address' })
+      return res.status(400).json({ error: 'From email must be a @example.com address' })
     }
     const fromEmail = from
 
@@ -555,7 +555,7 @@ export async function sendVoucherEmailInternal(voucher) {
 
   // Enforce finance visibility rules for initial voucher sends:
   // - If the submitter is a department member, do not send to finance addresses until the voucher is approved.
-  // - Do not send to finance.manager@getpayedmail.com for initial pending vouchers; finance.manager only receives processed/rejected status emails when they are the submitter (handled in status emails).
+  // - Do not send to finance.manager@example.com for initial pending vouchers; finance.manager only receives processed/rejected status emails when they are the submitter (handled in status emails).
   const submittedByNormalized = String(submittedBy || '').toLowerCase()
   recipientEmails = [...new Set(
     recipientEmails
@@ -675,7 +675,7 @@ export const sendLeaveRequestEmail = async (leave) => {
   }
 
   if (!isGetPayedMailEmail(submittedBy)) {
-    throw new Error('From email must be a @getpayedmail.com address')
+    throw new Error('From email must be a @example.com address')
   }
   const fromEmail = submittedBy
   const displayName = employeeName || getDisplayName(submittedBy)
@@ -756,7 +756,7 @@ export const sendLeaveStatusEmail = async (leave, status, approverEmail = '') =>
   }
 
   if (!isGetPayedMailEmail(approverEmail)) {
-    throw new Error('From email must be a @getpayedmail.com address')
+    throw new Error('From email must be a @example.com address')
   }
   const fromEmail = approverEmail
   const displayName = getDisplayName(approverEmail)

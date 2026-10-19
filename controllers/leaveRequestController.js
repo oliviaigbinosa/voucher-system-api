@@ -13,7 +13,7 @@ export const getLeaveRequests = async (req, res) => {
       email ? SuperAdmin.findOne({ email }).lean() : null,
     ])
     const requester = admin || user || superAdmin
-    const canViewAll = requester?.email?.toLowerCase() === 'hr@getpayedmail.com'
+    const canViewAll = requester?.email?.toLowerCase() === 'hr@example.com'
     const safeEmail = email ? email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : ''
     const managerQuery = email ? { departmentManager: { $regex: new RegExp('^' + safeEmail + '$', 'i') } } : null
 

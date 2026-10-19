@@ -84,7 +84,7 @@ export const createUser = async (req, res) => {
     
     // Validate email format
     if (!/@getpayedmail\.com$/.test(normalizedEmail)) {
-      return res.status(400).json({ error: 'Email must end with @getpayedmail.com' })
+      return res.status(400).json({ error: 'Email must end with @example.com' })
     }
     if (!/^[^\s@.]+\.[^\s@.]+@getpayedmail\.com$/.test(normalizedEmail)) {
       return res.status(400).json({ error: 'Enter a valid email' })

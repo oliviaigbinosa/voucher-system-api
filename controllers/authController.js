@@ -170,7 +170,7 @@ export const getMe = async (req, res) => {
   }
 }
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://voucher-system-client.netlify.app'
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000'
 
 function getResetSecret() {
   const RESET_SECRET = process.env.RESET_TOKEN_SECRET
@@ -217,13 +217,13 @@ export const forgotPassword = async (req, res) => {
 
     const token = createResetToken(normalizedEmail)
     const resetUrl = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalizedEmail)}`
-    const fromEmail = process.env.SMTP_FROM || 'getpayed.support@getpayedmail.com'
+    const fromEmail = process.env.SMTP_FROM || 'getpayed.support@example.com'
 
     // Store reset email in inbox for demo users and try to send via SMTP
     try {
       await Email.create({
         recipientEmail: normalizedEmail,
-        senderEmail: 'getpayed.support@getpayedmail.com',
+        senderEmail: 'getpayed.support@example.com',
         senderName: 'Getpayed Support',
         subject: 'Reset your Petty Cash Voucher password',
         text: `Hello,\n\nYou requested a password reset for your Petty Cash Voucher account.\n\nClick the link below to set a new password:\n${resetUrl}\n\nThis link will expire in 30 minutes. If you did not request this reset, please ignore this email.`,
@@ -292,7 +292,7 @@ export const resetPassword = async (req, res) => {
 
     // Store a confirmation email in the inbox so users can preview the reset
     try {
-      const fromEmail = 'getpayed.support@getpayedmail.com'
+      const fromEmail = 'getpayed.support@example.com'
       await Email.create({
         recipientEmail: normalizedEmail,
         senderEmail: fromEmail,
