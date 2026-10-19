@@ -11,6 +11,13 @@ const MONGODB_URI = process.env.MONGODB_URI
 
 const testUsers = [
   {
+    email: 'finance@example.com',
+    password: 'Password!123',
+    role: 'superadmin',
+    department: 'Finance',
+    model: 'SuperAdmin'
+  },
+  {
     email: 'department.manager@example.com',
     password: 'Password!123',
     role: 'admin',
