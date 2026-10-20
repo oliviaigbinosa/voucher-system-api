@@ -13,7 +13,7 @@ const testUsers = [
   {
     email: 'finance.manager@example.com',
     password: 'Password!123',
-    role: 'superadmin',
+    role: 'super admin',
     department: 'Finance',
     model: 'SuperAdmin'
   },
