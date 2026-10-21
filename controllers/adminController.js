@@ -83,10 +83,10 @@ export const createUser = async (req, res) => {
     const normalizedDepartment = department.trim()
     
     // Validate email format
-    if (!/@getpayedmail\.com$/.test(normalizedEmail)) {
+    if (!/@example\.com$/.test(normalizedEmail)) {
       return res.status(400).json({ error: 'Email must end with @example.com' })
     }
-    if (!/^[^\s@.]+\.[^\s@.]+@getpayedmail\.com$/.test(normalizedEmail)) {
+    if (!/^[^\s@.]+\.[^\s@.]+@example\.com$/.test(normalizedEmail)) {
       return res.status(400).json({ error: 'Enter a valid email' })
     }
     
@@ -253,7 +253,7 @@ export const validateManagerEmail = async (req, res) => {
       })
     }
 
-    if (!/^[^\s@]+@getpayedmail\.com$/.test(targetEmail)) {
+    if (!/^[^\s@]+@example\.com$/.test(targetEmail)) {
       return res.json({
         valid: false,
         error: 'Manager email must be a getpayedmail.com address',
