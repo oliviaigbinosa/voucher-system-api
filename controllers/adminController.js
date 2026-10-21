@@ -6,11 +6,11 @@ import { findAccountByEmail, isSuperAdminEmail } from '../utils/superAdmin.js'
 import { sendInviteEmailInternal } from '../controllers/emailController.js'
 
 function isGetPayedMailEmail(email) {
-  return /^[^\s@]+@getpayedmail\.com$/.test(email)
+  return /^[^\s@]+@example\.com$/.test(email)
 }
 
 function isUserEmail(email) {
-  return /^[^\s@.]+\.[^\s@.]+(?:\.[^\s@.]+)*@getpayedmail\.com$/.test(email)
+  return /^[^\s@.]+\.[^\s@.]+(?:\.[^\s@.]+)*@example\.com$/.test(email)
 }
 
 function getCreatedAt(user) {
