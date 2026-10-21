@@ -12,7 +12,7 @@ const DEPT_MEMBER_EMAIL = 'department.member@example.com'
 import nodemailer from 'nodemailer'
 
 function isGetPayedMailEmail(email) {
-  return /^[^\s@]+@getpayedmail\.com$/.test(email)
+  return /^[^\s@]+@example\.com$/.test(email)
 }
 
 function isAllowedRecipient(email) {
