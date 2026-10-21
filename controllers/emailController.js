@@ -11,12 +11,12 @@ const FINANCE_MANAGER_EMAIL = 'finance.manager@example.com'
 const DEPT_MEMBER_EMAIL = 'department.member@example.com'
 import nodemailer from 'nodemailer'
 
-function isGetPayedMailEmail(email) {
+function isExampleEmail(email) {
   return /^[^\s@]+@example\.com$/.test(email)
 }
 
 function isAllowedRecipient(email) {
-  return isGetPayedMailEmail(email)
+  return isExampleEmail(email)
 }
 
 function getDisplayName(email) {
@@ -218,7 +218,7 @@ async function getStatusNotificationRecipients(voucher, status) {
 }
 
 async function sendVoucherStatusEmailInternal(voucher, statusLabel) {
-  if (!isGetPayedMailEmail(voucher.from)) {
+  if (!isExampleEmail(voucher.from)) {
     throw new Error('From email must be a @example.com address')
   }
   const fromEmail = voucher.from
@@ -487,7 +487,7 @@ export const sendApprovedCcEmail = async (req, res) => {
       return res.status(400).json({ error: 'CC email must be a @example.com address' })
     }
 
-    if (!isGetPayedMailEmail(from)) {
+    if (!isExampleEmail(from)) {
       return res.status(400).json({ error: 'From email must be a @example.com address' })
     }
     const fromEmail = from
@@ -674,7 +674,7 @@ export const sendLeaveRequestEmail = async (leave) => {
     throw new Error('Department manager email is required to send leave request email')
   }
 
-  if (!isGetPayedMailEmail(submittedBy)) {
+  if (!isExampleEmail(submittedBy)) {
     throw new Error('From email must be a @example.com address')
   }
   const fromEmail = submittedBy
@@ -755,7 +755,7 @@ export const sendLeaveStatusEmail = async (leave, status, approverEmail = '') =>
     throw new Error('Submitter email is required to send leave status email')
   }
 
-  if (!isGetPayedMailEmail(approverEmail)) {
+  if (!isExampleEmail(approverEmail)) {
     throw new Error('From email must be a @example.com address')
   }
   const fromEmail = approverEmail

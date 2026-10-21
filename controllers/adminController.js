@@ -5,7 +5,7 @@ import SuperAdmin from '../models/SuperAdmin.js'
 import { findAccountByEmail, isSuperAdminEmail } from '../utils/superAdmin.js'
 import { sendInviteEmailInternal } from '../controllers/emailController.js'
 
-function isGetPayedMailEmail(email) {
+function isExampleEmail(email) {
   return /^[^\s@]+@example\.com$/.test(email)
 }
 
@@ -256,7 +256,7 @@ export const validateManagerEmail = async (req, res) => {
     if (!/^[^\s@]+@example\.com$/.test(targetEmail)) {
       return res.json({
         valid: false,
-        error: 'Manager email must be a getpayedmail.com address',
+        error: 'Manager email must be a example.com address',
         reason: 'domain',
       })
     }
