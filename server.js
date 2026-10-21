@@ -9,7 +9,6 @@ import authRoutes from './routes/authRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
 import emailRoutes from './routes/emailRoutes.js'
 import voucherRoutes from './routes/voucherRoutes.js'
-import leaveRequestRoutes from './routes/leaveRequestRoutes.js'
 
 // Validate required environment variables
 const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET', 'RESET_TOKEN_SECRET']
@@ -37,7 +36,6 @@ app.use('/api/auth', authRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api', emailRoutes)
 app.use('/api', voucherRoutes)
-app.use('/api', leaveRequestRoutes)
 
 app.get('/', (_req, res) => {
   res.json({ status: 'ok' })

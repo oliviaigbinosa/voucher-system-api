@@ -5,8 +5,8 @@ Frontend Repository: https://github.com/oliviaigbinosa/voucher-system-client
 ## This repository handles: <br>
 - User onboarding, authentication, and role management.
 - Voucher creation, approval workflows, and status updates.
-- Leave request submission and approval flows.
-- Sending of voucher and leave request emails via nodemailer
+
+- Sending of voucher emails via nodemailer
 ## Tech Stack
 ### Runtime:
 Node.js v20.0.0

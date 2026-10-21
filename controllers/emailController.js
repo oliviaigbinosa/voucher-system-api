@@ -117,7 +117,7 @@ function buildVoucherEmailText({
 
   const ccLine = includeCc && cc ? `\nCC:               ${formatDisplay(cc)}` : ''
 
-  return `${heading}\n${'═'.repeat(52)}\nVoucher No.:      ${voucherNo}\nCompany:          Getpayed Technology Solutions Ltd.\nSubmitted By:     ${submittedBy || from}\n\nEMAIL DETAILS\n${'─'.repeat(52)}\nFrom:             ${formatDisplay(from)}\nTo:               ${formatDisplay(to)}${ccLine}\nSubject:          ${subject}\n\nPAYEE INFORMATION\n${'─'.repeat(52)}\nPayee:            ${payee || ''}\nDepartment:       ${department || ''}\n\nAMOUNT & PURPOSE\n${'─'.repeat(52)}\nAmount (Figures): ₦${formattedAmount}${amountWords != null ? `\nAmount (Words):   ${amountWords || ''}` : ''}\n\nPurpose / Description:\n${purpose || ''}\n\nSUPPORTING DOCUMENTS\n${'─'.repeat(52)}\nSubmission Date:  ${submissionDate}\nAttached Files:\n${docs}\n\n${'═'.repeat(52)}\n${footer}${buildStatusLines({ approvedBy, declinedBy, processedBy, status })}`
+  return `${heading}\n${'═'.repeat(52)}\nVoucher No.:      ${voucherNo}\nCompany:          PettyFlo Ltd.\nSubmitted By:     ${submittedBy || from}\n\nEMAIL DETAILS\n${'─'.repeat(52)}\nFrom:             ${formatDisplay(from)}\nTo:               ${formatDisplay(to)}${ccLine}\nSubject:          ${subject}\n\nPAYEE INFORMATION\n${'─'.repeat(52)}\nPayee:            ${payee || ''}\nDepartment:       ${department || ''}\n\nAMOUNT & PURPOSE\n${'─'.repeat(52)}\nAmount (Figures): ₦${formattedAmount}${amountWords != null ? `\nAmount (Words):   ${amountWords || ''}` : ''}\n\nPurpose / Description:\n${purpose || ''}\n\nSUPPORTING DOCUMENTS\n${'─'.repeat(52)}\nSubmission Date:  ${submissionDate}\nAttached Files:\n${docs}\n\n${'═'.repeat(52)}\n${footer}${buildStatusLines({ approvedBy, declinedBy, processedBy, status })}`
 }
 
 function normalizeFinanceRecipient(email) {
@@ -397,8 +397,8 @@ export async function sendInviteEmailInternal(toEmail, password, senderEmail) {
     throw new Error('To email is required')
   }
 
-  const subject = 'Welcome to Getpayed Petty Cash Voucher System'
-  const text = `You have been invited to join the Getpayed Petty Cash Voucher System.
+  const subject = 'Welcome to PettyFlo system'
+  const text = `You have been invited to join the PettyFlo system.
 
 Your login credentials:
 Email: ${toEmailNormalized}
@@ -655,186 +655,4 @@ export const sendVoucherEmail = async (req, res) => {
     console.error('send-voucher-email failed', error)
     return res.status(500).json({ error: error.message || 'Failed to send voucher email' })
   }
-}
-
-export const sendLeaveRequestEmail = async (leave) => {
-  const {
-    employeeName,
-    departmentManager,
-    department,
-    leaveType,
-    startDate,
-    endDate,
-    reason,
-    attachments,
-    submittedBy,
-  } = leave
-
-  if (!departmentManager) {
-    throw new Error('Department manager email is required to send leave request email')
-  }
-
-  if (!isExampleEmail(submittedBy)) {
-    throw new Error('From email must be a @example.com address')
-  }
-  const fromEmail = submittedBy
-  const displayName = employeeName || getDisplayName(submittedBy)
-
-  const emailAttachments = []
-  const docLines = []
-  if (Array.isArray(attachments) && attachments.length) {
-    for (const doc of attachments) {
-      if (typeof doc === 'object' && doc?.data) {
-        const match = doc.data.match(/^data:([^;]+);base64,(.+)$/)
-        if (match) {
-          const [, contentType, base64] = match
-          emailAttachments.push({
-            filename: doc.name || 'attachment',
-            content: Buffer.from(base64, 'base64'),
-            contentType,
-          })
-        }
-        docLines.push(`  • ${doc.name || 'attachment'}`)
-      } else if (typeof doc === 'string') {
-        docLines.push(`  • ${doc}`)
-      }
-    }
-  }
-
-  const docs = docLines.length ? docLines.join('\n') : '  None'
-
-  const heading = 'LEAVE REQUEST SUBMITTED'
-
-  const text = `${heading}\n${'═'.repeat(49)}\nEmployee Name:    ${employeeName || ''}\nDepartment:       ${department || ''}\nLeave Type:       ${leaveType || ''}\nStart Date:       ${startDate || ''}\nEnd Date:         ${endDate || ''}\n\nReason:\n${reason || ''}\n\nAttachments:\n${docs}\n\n\n\n\n\n\n\n\n\nSubmitted By:     ${submittedBy || ''}\nTo:              ${departmentManager || ''}\n`
-
-  const html = `<div style="font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #333;">
-  <p style="margin: 0 0 4px 0; font-weight: bold; font-size: 16px;">${escapeHtml(heading)}</p>
-  <p style="margin: 0 0 8px 0; font-size: 16px;">${'═'.repeat(49)}</p>
-  <p style="margin: 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Employee Name:</strong> ${escapeHtml(employeeName)}</p>
-  <p style="margin: 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Department:</strong> ${escapeHtml(department)}</p>
-  <p style="margin: 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Leave Type:</strong> ${escapeHtml(leaveType)}</p>
-  <p style="margin: 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Start Date:</strong> ${escapeHtml(startDate)}</p>
-  <p style="margin: 4px 0; font-size: 16px;"><strong style="font-size: 16px;">End Date:</strong> ${escapeHtml(endDate)}</p>
-  <p style="margin: 16px 0 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Reason:</strong></p>
-  <p style="margin: 4px 0; font-size: 16px; white-space: pre-wrap;">${escapeHtml(reason)}</p>
-  <p style="margin: 16px 0 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Attachments:</strong></p>
-  <div style="padding-left: 12px; font-size: 16px; white-space: pre-wrap;">${escapeHtml(docs)}</div>
-  <p style="margin: 48px 0 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Submitted By:</strong> ${escapeHtml(submittedBy)}</p>
-  <p style="margin: 4px 0; font-size: 16px;"><strong style="font-size: 16px;">To:</strong> ${escapeHtml(departmentManager)}</p>
-</div>`
-
-  await storeEmailInInbox({
-    recipientEmail: departmentManager,
-    senderEmail: fromEmail,
-    senderName: displayName,
-    subject: `New Leave Request`,
-    text,
-    html,
-    type: 'leave-request',
-    relatedId: leave._id,
-    metadata: null,
-  })
-
-  const info = await sendMail({
-    from: formatAddress(fromEmail, displayName),
-    to: formatAddress(departmentManager),
-    subject: `New Leave Request`,
-    text,
-    html,
-    attachments: emailAttachments,
-  })
-
-  return info
-}
-
-export const sendLeaveStatusEmail = async (leave, status, approverEmail = '') => {
-  const { employeeName, submittedBy: email, department, leaveType, startDate, endDate, reason, attachments, departmentManager } = leave
-  const actualStatus = String(status || leave.status || '').toLowerCase() || 'status update'
-
-  if (!email) {
-    throw new Error('Submitter email is required to send leave status email')
-  }
-
-  if (!isExampleEmail(approverEmail)) {
-    throw new Error('From email must be a @example.com address')
-  }
-  const fromEmail = approverEmail
-  const displayName = getDisplayName(approverEmail)
-
-  const emailAttachments = []
-  const docLines = []
-  if (Array.isArray(attachments) && attachments.length) {
-    for (const doc of attachments) {
-      if (typeof doc === 'object' && doc?.data) {
-        const match = doc.data.match(/^data:([^;]+);base64,(.+)$/)
-        if (match) {
-          const [, contentType, base64] = match
-          emailAttachments.push({
-            filename: doc.name || 'attachment',
-            content: Buffer.from(base64, 'base64'),
-            contentType,
-          })
-        }
-        docLines.push(`  • ${doc.name || 'attachment'}`)
-      } else if (typeof doc === 'string') {
-        docLines.push(`  • ${doc}`)
-      }
-    }
-  }
-
-  const docs = docLines.length ? docLines.join('\n') : '  None'
-
-  const statusCapitalized = actualStatus.charAt(0).toUpperCase() + actualStatus.slice(1)
-  const heading = `LEAVE REQUEST ${statusCapitalized.toUpperCase()}`
-
-  const text = `${heading}\n${'═'.repeat(49)}\nEmployee Name:    ${employeeName || ''}\nEmail:            ${email || ''}\nDepartment:       ${department || ''}\nLeave Type:       ${leaveType || ''}\nStart Date:       ${startDate || ''}\nEnd Date:         ${endDate || ''}\n\nReason:\n${reason || ''}\n\nAttachments:\n${docs}\n\n\n\n\n\n\n\nYour leave request has been ${actualStatus} by ${departmentManager || ''}\n`
-
-  const html = `<div style="font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #333;">
-  <p style="margin: 0 0 4px 0; font-weight: bold; font-size: 16px;">${escapeHtml(heading)}</p>
-  <p style="margin: 0 0 8px 0; font-size: 16px;">${'═'.repeat(49)}</p>
-  <p style="margin: 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Employee Name:</strong> ${escapeHtml(employeeName)}</p>
-  <p style="margin: 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Email:</strong> ${escapeHtml(email)}</p>
-  <p style="margin: 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Department:</strong> ${escapeHtml(department)}</p>
-  <p style="margin: 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Leave Type:</strong> ${escapeHtml(leaveType)}</p>
-  <p style="margin: 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Start Date:</strong> ${escapeHtml(startDate)}</p>
-  <p style="margin: 4px 0; font-size: 16px;"><strong style="font-size: 16px;">End Date:</strong> ${escapeHtml(endDate)}</p>
-  <p style="margin: 16px 0 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Reason:</strong></p>
-  <p style="margin: 4px 0; font-size: 16px; white-space: pre-wrap;">${escapeHtml(reason)}</p>
-  <p style="margin: 16px 0 4px 0; font-size: 16px;"><strong style="font-size: 16px;">Attachments:</strong></p>
-  <div style="padding-left: 12px; font-size: 16px; white-space: pre-wrap;">${escapeHtml(docs)}</div>
-  <br><br>
-  <p style="margin: 24px 0 16px 0; font-size: 16px;"><em style="font-size: 16px;">Your leave request has been ${escapeHtml(actualStatus)} by ${escapeHtml(departmentManager)}</em></p>
-</div>`
-
-  const subject = `Leave Request ${statusCapitalized}`
-
-  // Approved/declined leave request emails should only be sent to the submitter.
-  const recipients = new Set()
-  recipients.add(email)
-
-  // Send to all recipients
-  for (const recipient of recipients) {
-    await storeEmailInInbox({
-      recipientEmail: recipient,
-      senderEmail: fromEmail,
-      senderName: displayName,
-      subject,
-      text,
-      html,
-      type: 'leave-status',
-      relatedId: leave._id,
-      metadata: null,
-    })
-
-    await sendMail({
-      from: formatAddress(fromEmail, displayName),
-      to: formatAddress(recipient),
-      subject,
-      text,
-      html,
-      attachments: emailAttachments,
-    })
-  }
-
-  return true
 }

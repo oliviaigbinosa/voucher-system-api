@@ -17,15 +17,6 @@ function shouldIncludeFinanceInboxEmail(emailDoc) {
     return false
   }
 
-  if (docType === 'leave-status') {
-    return senderEmail === FINANCE_MANAGER_EMAIL && ['approved', 'declined'].includes(statusValue)
-  }
-
-  if (docType === 'leave-request') {
-    // Show leave requests where finance.manager is the recipient
-    return true
-  }
-
   if (docType === 'voucher' || docType === 'voucher-status') {
     const isDepartmentMemberDeclinedVoucher =
       senderEmail === DEPT_MEMBER_EMAIL && statusValue === 'declined'
