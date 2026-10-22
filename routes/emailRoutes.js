@@ -17,6 +17,11 @@ function shouldIncludeFinanceInboxEmail(emailDoc) {
     return false
   }
 
+  // Allow password reset emails to be shown
+  if (docType === 'password-reset') {
+    return true
+  }
+
   if (docType === 'voucher' || docType === 'voucher-status') {
     const isDepartmentMemberDeclinedVoucher =
       senderEmail === DEPT_MEMBER_EMAIL && statusValue === 'declined'
