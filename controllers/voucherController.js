@@ -87,13 +87,26 @@ export const createVoucher = async (req, res) => {
       return res.status(400).json({ error: 'Missing required voucher fields' })
     }
 
-    // Generate correct voucher serial number based on global database count
+    // Generate correct voucher serial number based on highest existing serial
     const deptSlug = String(department || '').trim().toUpperCase().replace(/\s+/g, '-') || 'DEPT'
     const currentYear = new Date().getFullYear()
     const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0')
-    
-    const voucherCount = await Voucher.countDocuments()
-    const serial = String(voucherCount + 1).padStart(3, '0')
+
+    // Find all vouchers and extract their serial numbers to get the highest one
+    const allVouchers = await Voucher.find({}, { id: 1 }).lean()
+    let maxSerial = 0
+
+    for (const voucher of allVouchers) {
+      const idParts = String(voucher.id).split('/')
+      if (idParts.length === 5) {
+        const serial = parseInt(idParts[4], 10)
+        if (!isNaN(serial) && serial > maxSerial) {
+          maxSerial = serial
+        }
+      }
+    }
+
+    const serial = String(maxSerial + 1).padStart(3, '0')
     const correctVoucherId = `PCV/${deptSlug}/${currentYear}/${currentMonth}/${serial}`
 
     // Use the backend-generated voucher ID instead of the frontend one
@@ -115,9 +128,22 @@ export const createVoucher = async (req, res) => {
 
 export const getNextSerial = async (req, res) => {
   try {
-    const voucherCount = await Voucher.countDocuments()
-    const serial = String(voucherCount + 1).padStart(3, '0')
-    
+    // Find all vouchers and extract their serial numbers to get the highest one
+    const allVouchers = await Voucher.find({}, { id: 1 }).lean()
+    let maxSerial = 0
+
+    for (const voucher of allVouchers) {
+      const idParts = String(voucher.id).split('/')
+      if (idParts.length === 5) {
+        const serial = parseInt(idParts[4], 10)
+        if (!isNaN(serial) && serial > maxSerial) {
+          maxSerial = serial
+        }
+      }
+    }
+
+    const serial = String(maxSerial + 1).padStart(3, '0')
+
     return res.json({ serial })
   } catch (error) {
     console.error('Failed to get next serial', error)
