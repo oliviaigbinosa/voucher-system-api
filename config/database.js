@@ -15,7 +15,14 @@ export async function connectDb() {
   console.log('Attempting to connect to MongoDB:', maskedUri)
   
   try {
-    await mongoose.connect(uri)
+    await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      retryWrites: true,
+      retryReads: true
+    })
     console.log('Connected to MongoDB Atlas')
   } catch (error) {
     console.error('MongoDB connection error:', error.message)
