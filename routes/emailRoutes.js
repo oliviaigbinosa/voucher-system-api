@@ -42,7 +42,10 @@ function shouldIncludeFinanceInboxEmail(emailDoc) {
       senderEmail !== DEPT_MEMBER_EMAIL &&
       !['processed', 'rejected'].includes(statusValue)
 
-    return isApprovedVoucherFromDepartmentMember || isFinanceManagerProcessedRejectedStatus || isAdminOrOtherSenderVoucher
+    // Also include approved vouchers from any sender (including department member)
+    const isApprovedVoucher = statusValue === 'approved'
+
+    return isApprovedVoucherFromDepartmentMember || isFinanceManagerProcessedRejectedStatus || isAdminOrOtherSenderVoucher || isApprovedVoucher
   }
 
   return false
