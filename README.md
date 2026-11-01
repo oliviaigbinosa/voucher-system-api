@@ -1,5 +1,5 @@
 # Petty Cash Voucher (PCV) System (Backend)
-**This repository contains the Node.js/Express API and MongoDB for the Petty Cash Voucher web app for a fintech company, Getpayed Technology Solutions Ltd** <br> <br>
+**This repository contains the Node.js/Express API and MongoDB for the Petty Cash Voucher web app** <br> <br>
 Live Demo: https://voucher-system-client.netlify.app <br>
 Frontend Repository: https://github.com/oliviaigbinosa/voucher-system-client 
 ## This repository handles: <br>
